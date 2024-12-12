@@ -38,20 +38,16 @@ foreach (var group in lookup)
     {
         if (pri.WorkItemTitle != null)
         {
-            const string regex = "(?:User Story|Bug) ([0-9]{4,6})";
-            var workItemNr = Regex.Match(pri.WorkItemTitle, regex).Groups[1].Value;
+            const string regex = "(?:User Story|Bug) ([0-9]{4,6}): (.*)";
+            var match = Regex.Match(pri.WorkItemTitle, regex);
+            var workItemNr = match.Groups[1].Value;
             sb.Append(workItemNr);
             sb.Append(": ");
+            sb.AppendLine($"    - {match.Groups[2].Value}");
         }
-        sb.AppendLine(pri.PullRequestTitle);
-        sb.AppendLine(pri.PullRequestUrl);
-        if (pri.WorkItemTitle != null)
+        else
         {
-            sb.AppendLine($"    - {pri.WorkItemTitle}");
-        }
-        if (pri.WorkItemUrl != null)
-        {
-            sb.AppendLine($"    - {pri.WorkItemUrl}");
+            sb.AppendLine($"    - {pri.PullRequestTitle}");
         }
 
         sb.AppendLine();
@@ -178,8 +174,11 @@ internal static class Scraper
     public static IEnumerable<string> ScrapePullRequestLinks()
     {
         IJavaScriptExecutor js = (IJavaScriptExecutor)Driver;
-        Wait.Until(
-            ExpectedConditions.ElementIsVisible(By.CssSelector("table[aria-label='Pull request table']")));
+        Wait.Until(ExpectedConditions.ElementIsVisible(By.CssSelector("table[aria-label='Pull request table'], .vss-ZeroData")));
+        if (Driver.FindElements(By.ClassName("vss-ZeroData")).Any())
+        {
+            return [];
+        }
         var pullRequests =
             Driver.FindElements(By.CssSelector("table[aria-label='Pull request table'] a[role='row']"));
         var uniqueLinks = new HashSet<string>();
@@ -189,7 +188,7 @@ internal static class Scraper
         }
 
         // Try to load more 5 times
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < 3; i++)
         {
             var countBefore = uniqueLinks.Count;
             var lastpr = pullRequests.Last();
