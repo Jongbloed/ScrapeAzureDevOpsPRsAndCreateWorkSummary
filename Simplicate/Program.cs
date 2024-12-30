@@ -188,7 +188,7 @@ internal static class Scraper
         }
 
         // Try to load more 5 times
-        for (var i = 0; i < 3; i++)
+        for (var i = 0; i < 2; i++)
         {
             var countBefore = uniqueLinks.Count;
             var lastpr = pullRequests.Last();
