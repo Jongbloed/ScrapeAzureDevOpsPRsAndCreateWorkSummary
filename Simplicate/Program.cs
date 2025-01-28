@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.RegularExpressions;
 using OpenQA.Selenium;
@@ -30,30 +31,44 @@ pullRequestUrls.AddRange(ScrapePullRequestLinks(dateCutoff));
 var pullRequestInfos = pullRequestUrls.Select(pr => ScrapePullRequestInfo(pr, dateCutoff)).ToList();
 
 // Make a nice overview
-var lookup = pullRequestInfos
+var formattedData = pullRequestInfos
     .SelectMany(pri => pri.DaysWorkedOn.Select(date => new KeyValuePair<DateTime, PullRequestInfo>(date, pri)))
-    .ToLookup(pri => pri.Key, pri => pri.Value);
+    .GroupBy(datePriPair => datePriPair.Key)
+    .Select(dateGroup => new
+    {
+        date = dateGroup.Key, 
+        workItems = dateGroup.GroupBy(pri => pri.Value.WorkItemUrl)
+            .Select(workItemGroup =>
+            {
+                const string regex = "(?:User Story|Bug) ([0-9]{4,6}): (.*)";
+                var workItemTitle = workItemGroup.FirstOrDefault(
+                        w => !string.IsNullOrEmpty(w.Value?.WorkItemTitle)
+                    )
+                    .Value?.WorkItemTitle ?? "";
+                var match = Regex.Match(workItemTitle, regex);
+                var pullRequestSummary = string.Join(
+                    ", ", workItemGroup
+                        .Where(w => !string.IsNullOrEmpty(w.Value.PullRequestTitle))
+                        .Select(w => w.Value.PullRequestTitle.Substring(0, 30) + "..."));
+
+                return new
+                {
+                    workItemNr = match.Groups[1].Value,
+                    workItemTitle = match.Groups[2].Value,
+                    pullRequestSummary
+                };
+            })
+    });
 
 var sb = new StringBuilder();
-foreach (var group in lookup)
+foreach (var item in formattedData)
 {
-    sb.AppendLine($"{group.Key:d}:");
-    foreach (var pri in group)
+    sb.AppendLine($"{item.date:d}:");
+    foreach (var workitem in item.workItems)
     {
-        if (pri.WorkItemTitle != null)
-        {
-            const string regex = "(?:User Story|Bug) ([0-9]{4,6}): (.*)";
-            var match = Regex.Match(pri.WorkItemTitle, regex);
-            var workItemNr = match.Groups[1].Value;
-            sb.Append(workItemNr);
-            sb.Append(": ");
-            sb.AppendLine($"    - {match.Groups[2].Value}");
-        }
-        else
-        {
-            sb.AppendLine($"    - {pri.PullRequestTitle}");
-        }
-
+        sb.Append(workitem.workItemNr);
+        sb.Append(": ");
+        sb.AppendLine($"{workitem.workItemTitle} (PRs: {workitem.pullRequestSummary})");
         sb.AppendLine();
     }
 }
