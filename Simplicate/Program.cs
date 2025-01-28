@@ -9,21 +9,25 @@ using static Scraper;
 
 var pullRequestUrls = new List<string>();
 
+Console.Write("How many days (including today) back do we need data of? ");
+var number = int.Parse(Console.ReadLine()!);
+var dateCutoff = DateTime.Today.AddDays(-number);
+
 Login();
 
 SelectPullRequestsTab("Active");
 
 SelectMyName();
 
-pullRequestUrls.AddRange(ScrapePullRequestLinks());
+pullRequestUrls.AddRange(ScrapePullRequestLinks(dateCutoff));
 
 SelectPullRequestsTab("Completed");
 
 SelectMyName();
 
-pullRequestUrls.AddRange(ScrapePullRequestLinks());
+pullRequestUrls.AddRange(ScrapePullRequestLinks(dateCutoff));
 
-var pullRequestInfos = pullRequestUrls.Select(ScrapePullRequestInfo).ToList();
+var pullRequestInfos = pullRequestUrls.Select(pr => ScrapePullRequestInfo(pr, dateCutoff)).ToList();
 
 // Make a nice overview
 var lookup = pullRequestInfos
@@ -64,7 +68,7 @@ internal static class Scraper
     public static WebDriverWait Wait = new(Driver, TimeSpan.FromMinutes(5));
     public static string SolutionDir = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.Parent!.ToString();
 
-    public static PullRequestInfo ScrapePullRequestInfo(string prLink)
+    public static PullRequestInfo ScrapePullRequestInfo(string prLink, DateTime cutoff)
     {
         Driver.Navigate().GoToUrl(prLink);
 
@@ -115,6 +119,10 @@ internal static class Scraper
                         trimmedDate.Replace("mrt", "mar").Replace("mei", "may").Replace("okt", "oct")
                     )
                     .Date;
+                if (parsedDate <= cutoff)
+                {
+                    return;
+                }
                 uniqueDates.Add(parsedDate);
                 uniqueCommitHashes.Add(commitHash);
             }
@@ -171,7 +179,7 @@ internal static class Scraper
             ExpectedConditions.ElementIsVisible(By.CssSelector("table[aria-label='Pull request table']")));
     }
 
-    public static IEnumerable<string> ScrapePullRequestLinks()
+    public static IEnumerable<string> ScrapePullRequestLinks(DateTime updatedAfter)
     {
         IJavaScriptExecutor js = (IJavaScriptExecutor)Driver;
         Wait.Until(ExpectedConditions.ElementIsVisible(By.CssSelector("table[aria-label='Pull request table'], .vss-ZeroData")));
@@ -184,11 +192,17 @@ internal static class Scraper
         var uniqueLinks = new HashSet<string>();
         foreach (var pr in pullRequests)
         {
+            var lastUpdated = pr.FindElement(By.TagName("time")).GetAttribute("datetime");
+            var lastUpdatedDate = DateTime.Parse(lastUpdated).Date;
+            if (lastUpdatedDate <= updatedAfter)
+            {
+                return uniqueLinks;
+            }
             uniqueLinks.Add(pr.GetAttribute("href"));
         }
 
         // Try to load more 5 times
-        for (var i = 0; i < 2; i++)
+        for (var i = 0; i < 5; i++)
         {
             var countBefore = uniqueLinks.Count;
             var lastpr = pullRequests.Last();
@@ -200,6 +214,12 @@ internal static class Scraper
             // But then the top ones get unloaded so we need to grab whatever is on the screen a couple times and deduplicate
             foreach (var pr in pullRequests)
             {
+                var lastUpdated = pr.FindElement(By.TagName("time")).GetAttribute("datetime");
+                var lastUpdatedDate = DateTime.Parse(lastUpdated).Date;
+                if (lastUpdatedDate <= updatedAfter)
+                {
+                    return uniqueLinks;
+                }
                 uniqueLinks.Add(pr.GetAttribute("href"));
             }
 
