@@ -16,9 +16,9 @@ class Program
         Items calendarItems = calendarFolder.Items;
 
         // Sort and filter calendar appointments for 2025
-        calendarItems.Sort("[Start]");
-        string filter = "[Start] >= '01/01/2025'";
-        Items filteredCalendarItems = calendarItems.Restrict(filter);
+        //calendarItems.Sort("[Start]");
+        //string filter = "[Start] >= '01/01/2025'";
+        Items filteredCalendarItems = calendarItems;//.Restrict(filter);
 
         Console.WriteLine("Accepted or Tentative Calendar Appointments:");
         foreach (AppointmentItem appointment in filteredCalendarItems)
@@ -26,7 +26,7 @@ class Program
             Console.WriteLine($"- {appointment.Subject} ({appointment.Start})");
             if (appointment.IsRecurring)
                 Console.WriteLine("  [RECURRING]");
-            if (appointment.MeetingStatus == OlMeetingStatus.olMeetingCanceled)
+            if (appointment.MeetingStatus == OlMeetingStatus.olMeetingCanceled || appointment.MeetingStatus == OlMeetingStatus.olMeetingReceivedAndCanceled)
                 Console.WriteLine("  Ol' Meeting's cancelled y'all");
         }
 
@@ -48,7 +48,7 @@ class Program
                         Console.WriteLine($"- {tentativeMeeting.Subject} (Tentative - {tentativeMeeting.Start})");
                         if (tentativeMeeting.IsRecurring)
                             Console.WriteLine("  [RECURRING]");
-                        if (tentativeMeeting.MeetingStatus == OlMeetingStatus.olMeetingCanceled)
+                        if (tentativeMeeting.MeetingStatus == OlMeetingStatus.olMeetingCanceled || tentativeMeeting.MeetingStatus == OlMeetingStatus.olMeetingReceivedAndCanceled)
                             Console.WriteLine("  Ol' Meeting's cancelled y'all");
                     }
                 }
