@@ -46,10 +46,8 @@ var formattedData = pullRequestInfos
                     )
                     .Value?.WorkItemTitle ?? "";
                 var match = Regex.Match(workItemTitle, regex);
-                var pullRequestSummary = string.Join(
-                    ", ", workItemGroup
-                        .Where(w => !string.IsNullOrEmpty(w.Value.PullRequestTitle))
-                        .Select(w => w.Value.PullRequestTitle.Substring(0, 30) + "..."));
+                var pullRequestSummary =
+                    workItemGroup.Count() == 1 ? "" : $"({workItemGroup.Count()} PRs)"; 
 
                 return new
                 {
@@ -68,7 +66,7 @@ foreach (var item in formattedData)
     {
         sb.Append(workitem.workItemNr);
         sb.Append(": ");
-        sb.AppendLine($"{workitem.workItemTitle} (PRs: {workitem.pullRequestSummary})");
+        sb.AppendLine($"{workitem.workItemTitle} {workitem.pullRequestSummary}");
         sb.AppendLine();
     }
 }
