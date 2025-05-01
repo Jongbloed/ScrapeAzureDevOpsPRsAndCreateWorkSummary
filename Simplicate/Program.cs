@@ -77,6 +77,7 @@ Driver.Quit();
 
 internal static class Scraper
 {
+    public static string username;
     public static IWebDriver Driver = new ChromeDriver();
     public static WebDriverWait Wait = new(Driver, TimeSpan.FromMinutes(5));
     public static string SolutionDir = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.Parent!.ToString();
@@ -169,7 +170,7 @@ internal static class Scraper
     {
         Driver.FindElement(By.Id("__bolt-identity-picker-downdown-textfield-1")).Click();
         Thread.Sleep(200);
-        Driver.FindElement(By.Id("__bolt-identity-picker-downdown-textfield-1")).SendKeys("Erik Jongbloed");
+        Driver.FindElement(By.Id("__bolt-identity-picker-downdown-textfield-1")).SendKeys(username);
 
         Wait.Until(
             ExpectedConditions.ElementIsVisible(
@@ -181,7 +182,7 @@ internal static class Scraper
                     By.CssSelector(
                         "div.bolt-identitypickerdropdown-item.bolt-suggestions-item.bolt-suggestions-isSuggested"))
                 .FindElements(By.CssSelector("div.secondary-text"));
-        suggestions.Single(element => element.Text.Contains("ejongbloed@digitalrealty.com")).Click();
+        suggestions.Single(element => element.Text.Contains(username)).Click();
     }
 
     public static void SelectPullRequestsTab(string tab)
@@ -250,13 +251,13 @@ internal static class Scraper
     {
         // Load credentials
         var fileLines = File.ReadAllText(Path.Combine(SolutionDir, "creds.txt")).Split(new[]{'\n', '\r'}, StringSplitOptions.RemoveEmptyEntries);
-        var username = fileLines[0];
+        username = fileLines[0];
         var password = fileLines[1];
         // Perform login if needed (Azure DevOps may redirect to Microsoft sign-in)
         // Use driver.FindElement to locate and input credentials
         // Create a WebDriverWait to wait for the login page to load
 
-        Driver.Navigate().GoToUrl(@"https://dev.azure.com/inx-buildingmgmt/OpsView/_git/opsview-gui/pullrequest/");
+        Driver.Navigate().GoToUrl(@"https://dev.azure.com/voltimax/Voltimax/_git/Voltimax/pullrequest/");
         // Wait until the login button or a specific element is present on the page
         Wait.Until(ExpectedConditions.ElementIsVisible(By.Id("i0116")));
         Driver.FindElement(By.Id("i0116")).SendKeys(username);
