@@ -38,24 +38,8 @@ var formattedData = pullRequestInfos
     {
         date = dateGroup.Key, 
         workItems = dateGroup.GroupBy(pri => pri.Value.WorkItemUrl)
-            .Select(workItemGroup =>
-            {
-                const string regex = "(?:User Story|Bug) ([0-9]{4,6}): (.*)";
-                var workItemTitle = workItemGroup.FirstOrDefault(
-                        w => !string.IsNullOrEmpty(w.Value?.WorkItemTitle)
-                    )
-                    .Value?.WorkItemTitle ?? "";
-                var match = Regex.Match(workItemTitle, regex);
-                var pullRequestSummary =
-                    workItemGroup.Count() == 1 ? "" : $"({workItemGroup.Count()} PRs)"; 
-
-                return new
-                {
-                    workItemNr = match.Groups[1].Value,
-                    workItemTitle = match.Groups[2].Value,
-                    pullRequestSummary
-                };
-            })
+            .Select(workItemGroup => workItemGroup
+                .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.Value?.WorkItemTitle)).Value?.WorkItemTitle)
     });
 
 var sb = new StringBuilder();
@@ -64,10 +48,7 @@ foreach (var item in formattedData)
     sb.AppendLine($"{item.date:d}:");
     foreach (var workitem in item.workItems)
     {
-        sb.Append(workitem.workItemNr);
-        sb.Append(": ");
-        sb.AppendLine($"{workitem.workItemTitle} {workitem.pullRequestSummary}");
-        sb.AppendLine();
+        sb.AppendLine(workitem);
     }
 }
 
@@ -145,7 +126,7 @@ internal static class Scraper
         int newCount, oldCount;
         do
         {
-            theVisibleCommits = Driver.FindElements(By.CssSelector("a[role='row']"));
+            theVisibleCommits = Driver.FindElements(By.CssSelector("[role='row']"));
             oldCount = uniqueCommitHashes.Count;
             processCommits();
             newCount = uniqueCommitHashes.Count;
@@ -202,7 +183,7 @@ internal static class Scraper
             return [];
         }
         var pullRequests =
-            Driver.FindElements(By.CssSelector("table[aria-label='Pull request table'] a[role='row']"));
+            Driver.FindElements(By.CssSelector("table[aria-label='Pull request table'] [role='row']"));
         var uniqueLinks = new HashSet<string>();
         foreach (var pr in pullRequests)
         {
@@ -224,7 +205,7 @@ internal static class Scraper
             js.ExecuteScript("arguments[0].scrollIntoView(true);", lastpr);
             Thread.Sleep(300);
             pullRequests = Driver.FindElements(
-                By.CssSelector("table[aria-label='Pull request table'] a[role='row']"));
+                By.CssSelector("table[aria-label='Pull request table'] [role='row']"));
             // But then the top ones get unloaded so we need to grab whatever is on the screen a couple times and deduplicate
             foreach (var pr in pullRequests)
             {
@@ -257,7 +238,7 @@ internal static class Scraper
         // Use driver.FindElement to locate and input credentials
         // Create a WebDriverWait to wait for the login page to load
 
-        Driver.Navigate().GoToUrl(@"https://dev.azure.com/voltimax/Voltimax/_git/Voltimax/pullrequest/");
+        Driver.Navigate().GoToUrl(@"https://dev.azure.com/Energy2Meter/WeDriveSolar/_git/WeDriveSolar/pullrequest/");
         // Wait until the login button or a specific element is present on the page
         Wait.Until(ExpectedConditions.ElementIsVisible(By.Id("i0116")));
         Driver.FindElement(By.Id("i0116")).SendKeys(username);
